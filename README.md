@@ -267,18 +267,8 @@ docker compose up -d --build
 ✅ Live at → http://YOUR_EC2_IP:8000
 ```
 
-> 💡 **Production tip:** Put Nginx in front, point a domain at it, terminate SSL at the load balancer.
 
----
 
-### 🟣 Render (Free Tier Alternative)
-
-```
-1.  render.com → New Web Service → Connect GitHub repo
-2.  Add PostgreSQL addon
-3.  Set DATABASE_URL in environment variables
-4.  Deploy ✅
-```
 
 ---
 
@@ -290,10 +280,8 @@ docker compose up -d --build
 
 **Local `.env` file:**
 ```env
-DATABASE_URL=postgresql://postgres:admin@db:5432/url_shortener
+DATABASE_URL=postgresql://username:password@db:port/db_name
 ```
-
-> ⚠️ `.env` is in `.gitignore`. Never push credentials to GitHub.
 
 ---
 
