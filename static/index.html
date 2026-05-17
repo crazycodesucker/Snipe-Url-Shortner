@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SNIP — URL Shortener</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #080808;
+      --bg2: #0e0e0e;
+      --bg3: #141414;
+      --acid: #b8ff35;
+      --acid-dim: #8fc928;
+      --acid-glow: rgba(184,255,53,0.15);
+      --acid-glow2: rgba(184,255,53,0.06);
+      --white: #f0f0f0;
+      --muted: #555;
+      --muted2: #333;
+      --red: #ff3535;
+      --border: rgba(184,255,53,0.12);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'Space Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+      cursor: crosshair;
+    }
+
+    /* Scanline overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.07) 2px,
+        rgba(0,0,0,0.07) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* Noise grain */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: -50%;
+      width: 200%;
+      height: 200%;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      opacity: 0.4;
+      pointer-events: none;
+      z-index: 9998;
+      animation: grain 0.5s steps(2) infinite;
+    }
+
+    @keyframes grain {
+      0%   { transform: translate(0,0); }
+      25%  { transform: translate(-2%,-1%); }
+      50%  { transform: translate(1%,2%); }
+      75%  { transform: translate(-1%,1%); }
+      100% { transform: translate(2%,-2%); }
+    }
+
+    /* ─── HEADER ─── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px 48px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: rgba(8,8,8,0.92);
+      backdrop-filter: blur(12px);
+      z-index: 100;
+    }
+
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.5rem;
+      letter-spacing: -0.02em;
+      color: var(--acid);
+      text-shadow: 0 0 20px var(--acid-dim);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--acid);
+      clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+      display: inline-block;
+      animation: pulse-icon 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse-icon {
+      0%, 100% { filter: drop-shadow(0 0 4px var(--acid)); }
+      50% { filter: drop-shadow(0 0 14px var(--acid)); }
+    }
+
+    .header-tag {
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      border: 1px solid var(--muted2);
+      padding: 4px 10px;
+      border-radius: 2px;
+    }
+
+    /* ─── HERO ─── */
+    .hero {
+      text-align: center;
+      padding: 90px 24px 60px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-bg-circle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(184,255,53,0.05) 0%, transparent 70%);
+      pointer-events: none;
+      animation: breathe 4s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+      50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+    }
+
+    .hero-eyebrow {
+      font-size: 0.65rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--acid);
+      margin-bottom: 20px;
+      opacity: 0;
+      animation: fadeUp 0.6s 0.2s forwards;
+    }
+
+    .hero h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(3rem, 10vw, 7rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 0.9;
+      color: var(--white);
+      opacity: 0;
+      animation: fadeUp 0.6s 0.4s forwards;
+      position: relative;
+    }
+
+    .hero h1 span {
+      color: var(--acid);
+      text-shadow: 0 0 40px rgba(184,255,53,0.4);
+      display: inline-block;
+      animation: glitch 6s 2s infinite;
+    }
+
+    @keyframes glitch {
+      0%,94%,100% { clip-path: none; transform: none; }
+      95% { clip-path: polygon(0 20%, 100% 20%, 100% 40%, 0 40%); transform: translate(-3px, 0); filter: hue-rotate(90deg); }
+      96% { clip-path: polygon(0 60%, 100% 60%, 100% 80%, 0 80%); transform: translate(3px, 0); filter: hue-rotate(-90deg); }
+      97% { clip-path: none; transform: none; filter: none; }
+    }
+
+    .hero-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 20px;
+      letter-spacing: 0.05em;
+      opacity: 0;
+      animation: fadeUp 0.6s 0.6s forwards;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── MAIN CARD ─── */
+    .main-card {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 0 24px 100px;
+      opacity: 0;
+      animation: fadeUp 0.6s 0.8s forwards;
+    }
+
+    .input-group {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 6px 6px 6px 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      position: relative;
+    }
+
+    .input-group:focus-within {
+      border-color: var(--acid);
+      box-shadow: 0 0 0 1px var(--acid), 0 0 24px var(--acid-glow);
+    }
+
+    .input-prefix {
+      font-size: 0.7rem;
+      color: var(--acid);
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    #url-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--white);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.85rem;
+      padding: 14px 0;
+      min-width: 0;
+    }
+
+    #url-input::placeholder { color: var(--muted); }
+
+    .shorten-btn {
+      background: var(--acid);
+      color: #080808;
+      border: none;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+      padding: 14px 24px;
+      border-radius: 2px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+      flex-shrink: 0;
+    }
+
+    .shorten-btn:hover {
+      background: #d4ff5a;
+      box-shadow: 0 0 20px var(--acid-glow);
+      transform: translateY(-1px);
+    }
+
+    .shorten-btn:active { transform: scale(0.97); }
+
+    .shorten-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ─── RESULT BOX ─── */
+    .result-box {
+      margin-top: 16px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      display: none;
+      animation: slideIn 0.3s ease;
+    }
+
+    .result-box.show { display: block; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-header {
+      background: var(--acid-glow2);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .result-label {
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--acid);
+    }
+
+    .result-clicks {
+      font-size: 0.6rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+    }
+
+    .result-body {
+      padding: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: var(--bg2);
+    }
+
+    .result-url {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--acid);
+      letter-spacing: 0.02em;
+      text-decoration: none;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .result-url:hover { text-decoration: underline; }
+
+    .result-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .action-btn {
+      background: transparent;
+      border: 1px solid var(--muted2);
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      padding: 7px 14px;
+      border-radius: 2px;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: all 0.15s;
+    }
+
+    .action-btn:hover {
+      border-color: var(--acid);
+      color: var(--acid);
+      background: var(--acid-glow2);
+    }
+
+    .action-btn.copied {
+      border-color: var(--acid);
+      color: var(--acid);
+      background: var(--acid-glow2);
+    }
+
+    .result-original {
+      padding: 10px 18px;
+      font-size: 0.65rem;
+      color: var(--muted);
+      border-top: 1px solid var(--muted2);
+      background: var(--bg3);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .result-original span {
+      color: var(--muted);
+      opacity: 0.6;
+    }
+
+    /* ─── STATS SECTION ─── */
+    .stats-section {
+      margin-top: 16px;
+    }
+
+    .stats-toggle {
+      background: transparent;
+      border: 1px solid var(--muted2);
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      padding: 8px 16px;
+      border-radius: 2px;
+      cursor: pointer;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .stats-toggle:hover {
+      border-color: var(--muted);
+      color: var(--white);
+    }
+
+    .stats-panel {
+      display: none;
+      margin-top: 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .stats-panel.show { display: block; animation: slideIn 0.3s ease; }
+
+    .stats-input-group {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stats-slug-input {
+      flex: 1;
+      background: var(--bg3);
+      border: none;
+      outline: none;
+      color: var(--white);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.8rem;
+      padding: 14px 18px;
+    }
+
+    .stats-slug-input::placeholder { color: var(--muted); }
+
+    .stats-fetch-btn {
+      background: transparent;
+      border: none;
+      border-left: 1px solid var(--border);
+      color: var(--acid);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      padding: 14px 20px;
+      cursor: pointer;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: background 0.15s;
+    }
+
+    .stats-fetch-btn:hover { background: var(--acid-glow2); }
+
+    .stats-result {
+      padding: 20px 18px;
+      background: var(--bg2);
+      display: none;
+    }
+
+    .stats-result.show { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+
+    .stat-card {
+      background: var(--bg3);
+      border: 1px solid var(--muted2);
+      border-radius: 3px;
+      padding: 16px;
+    }
+
+    .stat-label {
+      font-size: 0.6rem;
+      color: var(--muted);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1.4rem;
+      color: var(--acid);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .stat-value.normal {
+      font-size: 0.85rem;
+      color: var(--white);
+      font-family: 'Space Mono', monospace;
+      font-weight: 400;
+    }
+
+    .stat-value.clicks-num {
+      font-size: 2.5rem;
+      text-shadow: 0 0 20px rgba(184,255,53,0.3);
+    }
+
+    /* ─── HISTORY ─── */
+    .history-section {
+      margin-top: 48px;
+      padding-top: 48px;
+      border-top: 1px solid var(--muted2);
+    }
+
+    .history-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 0.6rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .clear-btn {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.6rem;
+      cursor: pointer;
+      letter-spacing: 0.1em;
+      transition: color 0.15s;
+    }
+
+    .clear-btn:hover { color: var(--red); }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--bg2);
+      border: 1px solid var(--muted2);
+      border-radius: 3px;
+      gap: 12px;
+      transition: border-color 0.15s;
+      animation: fadeUp 0.3s ease;
+    }
+
+    .history-item:hover { border-color: var(--border); }
+
+    .history-short {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--acid);
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+
+    .history-orig {
+      font-size: 0.7rem;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+
+    .history-copy {
+      background: transparent;
+      border: 1px solid var(--muted2);
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.6rem;
+      padding: 5px 10px;
+      border-radius: 2px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+
+    .history-copy:hover {
+      border-color: var(--acid);
+      color: var(--acid);
+    }
+
+    .no-history {
+      text-align: center;
+      padding: 32px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      border: 1px dashed var(--muted2);
+      border-radius: 4px;
+    }
+
+    /* ─── ERROR ─── */
+    .error-msg {
+      margin-top: 12px;
+      padding: 12px 16px;
+      border: 1px solid rgba(255,53,53,0.3);
+      background: rgba(255,53,53,0.05);
+      border-radius: 3px;
+      font-size: 0.75rem;
+      color: var(--red);
+      display: none;
+    }
+
+    .error-msg.show { display: block; animation: slideIn 0.3s ease; }
+
+    /* ─── FOOTER ─── */
+    footer {
+      border-top: 1px solid var(--muted2);
+      padding: 24px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer-text {
+      font-size: 0.6rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+    }
+
+    .status-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.6rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+
+    .dot.online {
+      background: var(--acid);
+      box-shadow: 0 0 6px var(--acid);
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ─── LOADING SPINNER ─── */
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(8,8,8,0.3);
+      border-top-color: #080808;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ─── TOAST ─── */
+    .toast {
+      position: fixed;
+      bottom: 32px;
+      right: 32px;
+      background: var(--acid);
+      color: #080808;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 12px 20px;
+      border-radius: 2px;
+      transform: translateY(20px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 9997;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 600px) {
+      header { padding: 20px 20px; }
+      .hero { padding: 60px 20px 40px; }
+      .input-group { flex-direction: column; align-items: stretch; padding: 12px; }
+      .input-prefix { display: none; }
+      .shorten-btn { width: 100%; text-align: center; }
+      footer { flex-direction: column; gap: 8px; text-align: center; }
+      .result-body { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">
+      <span class="logo-icon"></span>
+      SNIP
+    </div>
+    <span class="header-tag">v1.0.0 // LIVE</span>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-bg-circle"></div>
+      <p class="hero-eyebrow">// URL shortener</p>
+      <h1>MAKE IT<br /><span>SHORT.</span></h1>
+      <p class="hero-sub">Paste any URL. Get a clean link. Track every click.</p>
+    </section>
+
+    <div class="main-card">
+      <!-- Input -->
+      <div class="input-group">
+        <span class="input-prefix">https://</span>
+        <input
+          type="text"
+          id="url-input"
+          placeholder="paste your long url here..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button class="shorten-btn" id="shorten-btn" onclick="shortenUrl()">
+          SNIP IT
+        </button>
+      </div>
+
+      <!-- Error -->
+      <div class="error-msg" id="error-msg"></div>
+
+      <!-- Result -->
+      <div class="result-box" id="result-box">
+        <div class="result-header">
+          <span class="result-label">// shortened</span>
+          <span class="result-clicks" id="result-clicks-header"></span>
+        </div>
+        <div class="result-body">
+          <a href="#" class="result-url" id="result-url" target="_blank"></a>
+          <div class="result-actions">
+            <button class="action-btn" id="copy-btn" onclick="copyResult()">COPY</button>
+            <button class="action-btn" onclick="openResult()">OPEN ↗</button>
+          </div>
+        </div>
+        <div class="result-original" id="result-original"></div>
+      </div>
+
+      <!-- Stats toggle -->
+      <div class="stats-section">
+        <button class="stats-toggle" onclick="toggleStats()">
+          <span id="stats-toggle-icon">+</span> CHECK STATS
+        </button>
+        <div class="stats-panel" id="stats-panel">
+          <div class="stats-input-group">
+            <input
+              type="text"
+              class="stats-slug-input"
+              id="stats-slug"
+              placeholder="enter short code (e.g. aB3xYz)"
+              spellcheck="false"
+            />
+            <button class="stats-fetch-btn" onclick="fetchStats()">FETCH</button>
+          </div>
+          <div class="stats-result" id="stats-result">
+            <div class="stat-card">
+              <div class="stat-label">// clicks</div>
+              <div class="stat-value clicks-num" id="stat-clicks">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">// code</div>
+              <div class="stat-value" id="stat-code">—</div>
+            </div>
+            <div class="stat-card" style="grid-column: span 2;">
+              <div class="stat-label">// original url</div>
+              <div class="stat-value normal" id="stat-url">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- History -->
+      <div class="history-section" id="history-section" style="display:none">
+        <div class="history-header">
+          <span class="section-title">// recent links</span>
+          <button class="clear-btn" onclick="clearHistory()">CLEAR</button>
+        </div>
+        <div class="history-list" id="history-list"></div>
+      </div>
+      <div class="no-history" id="no-history">
+        <span style="opacity:0.4">No links shortened yet.</span><br />
+        <span style="opacity:0.25; font-size:0.65rem;">Your history lives here.</span>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <span class="footer-text">SNIP — fast url shortener</span>
+    <span class="status-dot">
+      <span class="dot" id="status-dot"></span>
+      <span id="status-text">CHECKING...</span>
+    </span>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const BASE = window.location.origin;
+    let currentShort = '';
+    let statsOpen = false;
+
+    // ─── CHECK HEALTH ───
+    async function checkHealth() {
+      try {
+        const r = await fetch(`${BASE}/health`);
+        if (r.ok) {
+          document.getElementById('status-dot').classList.add('online');
+          document.getElementById('status-text').textContent = 'API ONLINE';
+        } else { throw new Error(); }
+      } catch {
+        document.getElementById('status-text').textContent = 'API OFFLINE';
+      }
+    }
+    checkHealth();
+
+    // ─── SHORTEN ───
+    async function shortenUrl() {
+      const input = document.getElementById('url-input').value.trim();
+      const btn = document.getElementById('shorten-btn');
+      const errBox = document.getElementById('error-msg');
+
+      // basic validation
+      let url = input;
+      if (!url) return showError('Please paste a URL first.');
+      if (!url.match(/^https?:\/\//i)) url = 'https://' + url;
+      if (!isValidUrl(url)) return showError('That doesn\'t look like a valid URL.');
+
+      errBox.classList.remove('show');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>';
+
+      try {
+        const res = await fetch(`${BASE}/shorten`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          throw new Error(d.detail || `Server error (${res.status})`);
+        }
+
+        const data = await res.json();
+        const shortUrl = `${BASE}/${data.short_code}`;
+        currentShort = shortUrl;
+
+        // show result
+        document.getElementById('result-url').href = shortUrl;
+        document.getElementById('result-url').textContent = shortUrl.replace(/^https?:\/\//, '');
+        document.getElementById('result-original').innerHTML = `<span>→ </span>${data.url}`;
+        document.getElementById('result-clicks-header').textContent =
+          data.clicks === 0 ? 'fresh link' : `${data.clicks} click${data.clicks !== 1 ? 's' : ''}`;
+        document.getElementById('result-box').classList.add('show');
+        document.getElementById('copy-btn').textContent = 'COPY';
+        document.getElementById('copy-btn').classList.remove('copied');
+
+        // save to history
+        saveHistory({ short: shortUrl, code: data.short_code, orig: data.url, clicks: data.clicks });
+        renderHistory();
+        showToast('URL shortened!');
+
+      } catch (e) {
+        showError(e.message || 'Something went wrong. Is the backend running?');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'SNIP IT';
+      }
+    }
+
+    // ─── COPY ───
+    function copyResult() {
+      navigator.clipboard.writeText(currentShort).then(() => {
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = 'COPIED!';
+        btn.classList.add('copied');
+        showToast('Copied to clipboard!');
+        setTimeout(() => {
+          btn.textContent = 'COPY';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+
+    function openResult() {
+      if (currentShort) window.open(currentShort, '_blank');
+    }
+
+    // ─── STATS ───
+    function toggleStats() {
+      statsOpen = !statsOpen;
+      document.getElementById('stats-panel').classList.toggle('show', statsOpen);
+      document.getElementById('stats-toggle-icon').textContent = statsOpen ? '−' : '+';
+    }
+
+    async function fetchStats() {
+      const slug = document.getElementById('stats-slug').value.trim();
+      if (!slug) { showToast('Enter a short code'); return; }
+
+      try {
+        const res = await fetch(`${BASE}/stats/${slug}`);
+        if (!res.ok) throw new Error('Code not found');
+        const data = await res.json();
+
+        document.getElementById('stat-clicks').textContent = data.clicks;
+        document.getElementById('stat-code').textContent = data.short_code;
+        document.getElementById('stat-url').textContent = data.url;
+        document.getElementById('stats-result').classList.add('show');
+      } catch (e) {
+        showToast(e.message);
+      }
+    }
+
+    // ─── HISTORY ───
+    function getHistory() {
+      try { return JSON.parse(localStorage.getItem('snip_history') || '[]'); }
+      catch { return []; }
+    }
+
+    function saveHistory(item) {
+      let h = getHistory();
+      h = h.filter(x => x.short !== item.short);
+      h.unshift(item);
+      if (h.length > 10) h = h.slice(0, 10);
+      localStorage.setItem('snip_history', JSON.stringify(h));
+    }
+
+    function renderHistory() {
+      const h = getHistory();
+      const list = document.getElementById('history-list');
+      const section = document.getElementById('history-section');
+      const empty = document.getElementById('no-history');
+
+      list.innerHTML = '';
+      if (h.length === 0) {
+        section.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+      }
+      section.style.display = 'block';
+      empty.style.display = 'none';
+
+      h.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'history-item';
+        div.innerHTML = `
+          <a href="${item.short}" class="history-short" target="_blank">
+            ${item.short.replace(/^https?:\/\//, '')}
+          </a>
+          <span class="history-orig">${item.orig}</span>
+          <button class="history-copy" onclick="copyText('${item.short}', this)">COPY</button>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    function copyText(text, btn) {
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'DONE!';
+        showToast('Copied!');
+        setTimeout(() => btn.textContent = 'COPY', 2000);
+      });
+    }
+
+    function clearHistory() {
+      localStorage.removeItem('snip_history');
+      renderHistory();
+    }
+
+    // ─── UTILS ───
+    function showError(msg) {
+      const e = document.getElementById('error-msg');
+      e.textContent = `// error: ${msg}`;
+      e.classList.add('show');
+      document.getElementById('result-box').classList.remove('show');
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    function isValidUrl(str) {
+      try { new URL(str); return true; } catch { return false; }
+    }
+
+    // Enter key
+    document.getElementById('url-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') shortenUrl();
+    });
+
+    document.getElementById('stats-slug').addEventListener('keydown', e => {
+      if (e.key === 'Enter') fetchStats();
+    });
+
+    // Init history
+    renderHistory();
+  </script>
+</body>
+</html>
