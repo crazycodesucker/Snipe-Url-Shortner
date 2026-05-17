@@ -322,13 +322,6 @@ DATABASE_URL=postgresql://postgres:admin@db:5432/url_shortener
 ✅  Click tracking
 ✅  Docker setup
 ✅  Security hardening + audit
-
-⬜  Owner tokens for private stats
-⬜  Custom slug support
-⬜  Redis-backed rate limiting (multi-worker)
-⬜  Slug expiry / TTL
-⬜  Frontend UI
-⬜  QR code generation per slug
 ```
 
 ---
